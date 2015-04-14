@@ -1,5 +1,9 @@
 import numpy, random
 
+#TODO:  if we re-initialise a cluster centroid because no points were assigned 
+#       to it, do we consider that as a "change" as well, ensuring that we can
+#       never terminate with an empty cluster
+
 class KMeans:
     def __init__(self,X,M,K):
         self.X = numpy.array(X,dtype=float)
@@ -27,7 +31,8 @@ class KMeans:
     
     """ Initialise the cluster centroids randomly """
     def initialise(self,seed=None):
-        random.seed(seed)
+        if seed is not None:
+            random.seed(seed)
         
         # Compute the mins and maxes of the columns
         self.mins = [min([self.X[i,j] for i in self.omega_columns[j]]) for j in range(0,self.no_coordinates)]
@@ -98,37 +103,46 @@ class KMeans:
         
         
     """ Update the centroids to the mean of the points assigned to it. 
-        If for a coordinate there are no known values, we set this cluster's mask to 0 there. """
+        If for a coordinate there are no known values, we set this cluster's mask to 0 there.
+        If a cluster has no points assigned to it at all, we randomly re-initialise it."""
     def update(self):
         for c in xrange(0,self.K):          
             known_coordinate_values = self.find_known_coordinate_values(c)
             
-            # For each coordinate set the centroid to the average, or to None if no values are observed
-            for coordinate in xrange(0,self.no_coordinates):
-                coordinate_values = known_coordinate_values[coordinate]
-                
-                if len(coordinate_values) == 0:
-                    new_coordinate = None              
-                    new_mask = 0
-                else:
-                    new_coordinate = sum(coordinate_values) / float(len(coordinate_values))
-                    new_mask = 1
-                
-                self.centroids[c][coordinate] = new_coordinate
-                self.mask_centroids[c][coordinate] = new_mask
+            if known_coordinate_values is None:
+                # Randomly re-initialise this point
+                self.centroids[c] = self.random_cluster_centroid()
+                self.mask_centroids[c] = numpy.ones(self.no_coordinates)
+            else:
+                # For each coordinate set the centroid to the average, or to None if no values are observed
+                for coordinate,coordinate_values in enumerate(known_coordinate_values):
+                    if len(coordinate_values) == 0:
+                        new_coordinate = None              
+                        new_mask = 0
+                    else:
+                        new_coordinate = sum(coordinate_values) / float(len(coordinate_values))
+                        new_mask = 1
+                    
+                    self.centroids[c][coordinate] = new_coordinate
+                    self.mask_centroids[c][coordinate] = new_mask
     
     
     # For a given centroid c, construct a list of lists, each list consisting of
     # all known coordinate values of data points assigned to the centroid.
+    # If no points are assigned to a cluster, return None.
     def find_known_coordinate_values(self,c):
         assigned_data_indexes = self.data_point_assignments[c]
         data_points = numpy.array([self.X[d] for d in assigned_data_indexes])
         masks = numpy.array([self.M[d] for d in assigned_data_indexes])
         
-        lists_known_coordinate_values = [
-            [v for d,v in enumerate(data_points.T[coordinate]) if masks[d][coordinate]]
-            for coordinate in xrange(0,self.no_coordinates)
-        ]
+        if len(assigned_data_indexes) == 0:
+            lists_known_coordinate_values = None
+        else: 
+            lists_known_coordinate_values = [
+                [v for d,v in enumerate(data_points.T[coordinate]) if masks[d][coordinate]]
+                for coordinate in xrange(0,self.no_coordinates)
+            ]
+            
         return lists_known_coordinate_values
         
     

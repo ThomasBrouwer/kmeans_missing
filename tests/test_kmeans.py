@@ -203,6 +203,7 @@ def test_assignment():
 
 """ Test updating the cluster centroid coordinates. """
 def test_update():
+    # Normal case
     X = numpy.array([[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0]])
     M = numpy.array([[1,1,0],[0,1,0],[1,1,1]])
     K = 2
@@ -213,6 +214,25 @@ def test_update():
     
     new_centroids = [[1.0,3.5,None],[7.0,8.0,9.0]]
     new_mask_centroids = [[1,1,0],[1,1,1]]
+    kmeans.update()
+    assert numpy.array_equal(new_centroids,kmeans.centroids)
+    assert numpy.array_equal(new_mask_centroids,kmeans.mask_centroids)
+    
+    # Case when one cluster has no points assigned to it - we then randomly re-initialise that cluster
+    X = numpy.array([[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0]])
+    M = numpy.array([[1,1,0],[0,1,0],[1,1,1]])
+    K = 2
+    kmeans = KMeans(X,M,K)
+    kmeans.data_point_assignments = numpy.array([[0,1,2],[]]) #points 0,1,2 to cluster 0, none to cluster 1
+    kmeans.centroids = [[0.0,0.0,0.0],[0.0,0.0,0.0]]
+    kmeans.mask_centroids = [[0.0,0.0,0.0],[0.0,0.0,0.0]]
+    kmeans.mins = [1.0,2.0,9.0]
+    kmeans.maxs = [7.0,8.0,9.0]
+    
+    new_centroids = [[4.0,5.0,9.0],[6.066531109150288,6.547726417641815,9.0]]
+    new_mask_centroids = [[1,1,1],[1,1,1]]
+    
+    random.seed(0)
     kmeans.update()
     assert numpy.array_equal(new_centroids,kmeans.centroids)
     assert numpy.array_equal(new_mask_centroids,kmeans.mask_centroids)
@@ -296,6 +316,7 @@ def test_compute_MSE():
 
 """ Test computing the known coordinate values of all points assigned to a given cluster centroid """
 def test_find_known_coordinate_values():
+    # Normal test case
     X = numpy.array([[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0]])
     M = numpy.array([[1,1,0],[0,1,0],[1,1,1]])
     K = 2
@@ -304,6 +325,21 @@ def test_find_known_coordinate_values():
     
     expected_lists_known_coordinate_values_0 = [[1.0],[2.0,5.0],[]]
     expected_lists_known_coordinate_values_1 = [[7.0],[8.0],[9.0]]
+    lists_known_coordinate_values_0 = kmeans.find_known_coordinate_values(0)
+    lists_known_coordinate_values_1 = kmeans.find_known_coordinate_values(1)
+    
+    assert numpy.array_equal(expected_lists_known_coordinate_values_0,lists_known_coordinate_values_0)
+    assert numpy.array_equal(expected_lists_known_coordinate_values_1,lists_known_coordinate_values_1)
+    
+    # Cluster without any points
+    X = numpy.array([[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0]])
+    M = numpy.array([[1,1,0],[0,1,0],[1,1,1]])
+    K = 2
+    kmeans = KMeans(X,M,K)
+    kmeans.data_point_assignments = numpy.array([[0,1,2],[]]) #points 0,1,2 to cluster 0, none to cluster 1
+    
+    expected_lists_known_coordinate_values_0 = [[1.0,7.0],[2.0,5.0,8.0],[9.0]]
+    expected_lists_known_coordinate_values_1 = None
     lists_known_coordinate_values_0 = kmeans.find_known_coordinate_values(0)
     lists_known_coordinate_values_1 = kmeans.find_known_coordinate_values(1)
     
