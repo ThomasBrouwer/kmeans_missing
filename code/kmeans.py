@@ -1,9 +1,5 @@
 import numpy, random
 
-#TODO:  if we re-initialise a cluster centroid because no points were assigned 
-#       to it, do we consider that as a "change" as well, ensuring that we can
-#       never terminate with an empty cluster
-
 class KMeans:
     def __init__(self,X,M,K):
         self.X = numpy.array(X,dtype=float)
@@ -55,9 +51,12 @@ class KMeans:
             
     """ Perform the clustering, until there is no change """
     def cluster(self):
+        iteration = 1
         change = True
         while change:
-            # First (re)assign data points to the closest cluster centroid, then recompute centroids
+            print "Iteration: %s." % iteration
+            iteration += 1
+            
             change = self.assignment()
             self.update()
             
@@ -104,7 +103,7 @@ class KMeans:
         
     """ Update the centroids to the mean of the points assigned to it. 
         If for a coordinate there are no known values, we set this cluster's mask to 0 there.
-        If a cluster has no points assigned to it at all, we randomly re-initialise it."""
+        If a cluster has no points assigned to it at all, we randomly re-initialise it. """
     def update(self):
         for c in xrange(0,self.K):          
             known_coordinate_values = self.find_known_coordinate_values(c)
@@ -152,3 +151,5 @@ class KMeans:
         for d in range(0,self.no_points):
             c = self.cluster_assignments[d]
             self.clustering_results[d][c] = 1
+            
+        print [sum(column) for column in self.clustering_results.T]
