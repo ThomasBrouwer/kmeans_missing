@@ -17,4 +17,4 @@ For initialisation, we:
 
 We iterate until no points change cluster anymore.
 
-The cluster assignments can then be retrieved as a numpy array of arrays from KMeans.cluster_assignments.
+The cluster assignments can then be retrieved as an from KMeans.cluster_assignments, or as a matrix from KMeans.clustering_results.

@@ -55,6 +55,9 @@ class KMeans:
             # First (re)assign data points to the closest cluster centroid, then recompute centroids
             change = self.assignment()
             self.update()
+            
+        # At the end, we create a binary matrix indicating which points were assigned to which cluster
+        self.create_matrix()
 
 
     """ Assign each data point to the closest cluster, and return whether any reassignments were made """
@@ -127,3 +130,11 @@ class KMeans:
             for coordinate in xrange(0,self.no_coordinates)
         ]
         return lists_known_coordinate_values
+        
+    
+    # Create a binary matrix indicating the clustering (so size [no_points x K])
+    def create_matrix(self):
+        self.clustering_results = numpy.zeros((self.no_points,self.K))
+        for d in range(0,self.no_points):
+            c = self.cluster_assignments[d]
+            self.clustering_results[d][c] = 1

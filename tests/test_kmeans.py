@@ -113,11 +113,13 @@ def test_cluster():
     expected_centroids = [[2.0,4.0],[7.0,5.0]] 
     expected_cluster_assignments = [0,1,0]
     expected_data_point_assignments = [[0,2],[1]]
+    expected_clustering_results = [[1,0],[0,1],[1,0]]
     
     kmeans.cluster()
     assert numpy.array_equal(expected_centroids,kmeans.centroids)
     assert numpy.array_equal(expected_cluster_assignments,kmeans.cluster_assignments)
     assert numpy.array_equal(expected_data_point_assignments,kmeans.data_point_assignments)
+    assert numpy.array_equal(expected_clustering_results,kmeans.clustering_results)
     
     ### Missing values case.
     # Points 2,3,4 will first go to cluster 2, and point 1 to cluster 1.
@@ -134,11 +136,13 @@ def test_cluster():
     expected_centroids = [[2.5,5.0],[10.0,1.5]] 
     expected_cluster_assignments = [0,0,1,1]
     expected_data_point_assignments = [[0,1],[2,3]]
+    expected_clustering_results = [[1,0],[1,0],[0,1],[0,1]]
     
     kmeans.cluster()
     assert numpy.array_equal(expected_centroids,kmeans.centroids)
     assert numpy.array_equal(expected_cluster_assignments,kmeans.cluster_assignments)
     assert numpy.array_equal(expected_data_point_assignments,kmeans.data_point_assignments)
+    assert numpy.array_equal(expected_clustering_results,kmeans.clustering_results)
     
     ### Cluster with None coordinate.
     # Cluster 1 gets points 1 and 2, cluster 2 gets 3 and 4.
@@ -154,11 +158,13 @@ def test_cluster():
     expected_centroids = [[2.5,5.0],[None,1.5]] 
     expected_cluster_assignments = [0,0,1,1]
     expected_data_point_assignments = [[0,1],[2,3]]
+    expected_clustering_results = [[1,0],[1,0],[0,1],[0,1]]
     
     kmeans.cluster()
     assert numpy.array_equal(expected_centroids,kmeans.centroids)
     assert numpy.array_equal(expected_cluster_assignments,kmeans.cluster_assignments)
     assert numpy.array_equal(expected_data_point_assignments,kmeans.data_point_assignments)
+    assert numpy.array_equal(expected_clustering_results,kmeans.clustering_results)
 
 
 """ Test reassigning the points to the closest cluster. """
@@ -304,3 +310,16 @@ def test_find_known_coordinate_values():
     assert numpy.array_equal(expected_lists_known_coordinate_values_0,lists_known_coordinate_values_0)
     assert numpy.array_equal(expected_lists_known_coordinate_values_1,lists_known_coordinate_values_1)
     
+
+""" Test the construction of the clustering matrix. """
+def test_create_matrix():
+    X = numpy.array([[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0]])
+    M = numpy.array([[1,1,0],[0,1,0],[1,1,1]])
+    K = 2
+    kmeans = KMeans(X,M,K)
+    kmeans.cluster_assignments = numpy.array([1,0,1])
+    kmeans.create_matrix()
+    
+    expected_clustering_results = [[0,1],[1,0],[0,1]]
+    clustering_results = kmeans.clustering_results
+    assert numpy.array_equal(expected_clustering_results,clustering_results)
