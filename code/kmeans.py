@@ -1,4 +1,4 @@
-import numpy, random
+import numpy, random, time
 
 class KMeans:
     def __init__(self,X,M,K):
@@ -56,7 +56,6 @@ class KMeans:
         while change:
             print "Iteration: %s." % iteration
             iteration += 1
-            
             change = self.assignment()
             self.update()
             
@@ -87,7 +86,6 @@ class KMeans:
         closest_MSE = None
         for c,(centroid,mask_c) in enumerate(zip(self.centroids,self.mask_centroids)):
             MSE = self.compute_MSE(data_point,centroid,mask_d,mask_c)
-            
             if (closest_MSE is None) or (MSE is not None and MSE < closest_MSE): #either no closest centroid yet, or MSE is defined and less
                 closest_MSE = MSE
                 closest_index = c
@@ -97,9 +95,10 @@ class KMeans:
     # Compute the Euclidean distance between the data point and the cluster centroid.
     # If they have no known values in common, we return None (=infinite distance).
     def compute_MSE(self,x1,x2,mask1,mask2):
-        overlap = [i for i,(m1,m2) in enumerate(zip(mask1,mask2)) if (m1 and m2)]
-        return None if len(overlap) == 0 else sum([(x1[i]-x2[i])**2 for i in overlap]) / float(len(overlap))
-        
+        mask1_mask2 = numpy.multiply(mask1,mask2)
+        len_overlap = mask1_mask2.sum()
+        return None if len_overlap == 0 else numpy.multiply(mask1_mask2,numpy.power(numpy.subtract(x1,x2),2)).sum() / float(len_overlap)
+            
         
     """ Update the centroids to the mean of the points assigned to it. 
         If for a coordinate there are no known values, we set this cluster's mask to 0 there.
@@ -113,10 +112,10 @@ class KMeans:
                 self.centroids[c] = self.random_cluster_centroid()
                 self.mask_centroids[c] = numpy.ones(self.no_coordinates)
             else:
-                # For each coordinate set the centroid to the average, or to None if no values are observed
+                # For each coordinate set the centroid to the average, or to 0 if no values are observed
                 for coordinate,coordinate_values in enumerate(known_coordinate_values):
                     if len(coordinate_values) == 0:
-                        new_coordinate = None              
+                        new_coordinate = 0              
                         new_mask = 0
                     else:
                         new_coordinate = sum(coordinate_values) / float(len(coordinate_values))

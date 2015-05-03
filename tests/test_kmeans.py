@@ -144,7 +144,7 @@ def test_cluster():
     assert numpy.array_equal(expected_data_point_assignments,kmeans.data_point_assignments)
     assert numpy.array_equal(expected_clustering_results,kmeans.clustering_results)
     
-    ### Cluster with None coordinate.
+    ### Cluster with 0 coordinate.
     # Cluster 1 gets points 1 and 2, cluster 2 gets 3 and 4.
     X = [[2,5],[3,-1],[-1,1],[-1,2]]
     M = [[1,1],[1,0],[0,1],[0,1]]
@@ -155,7 +155,7 @@ def test_cluster():
     kmeans.mask_centroids = numpy.ones((2,2))
     kmeans.cluster_assignments = [-1,-1,-1,-1]
     
-    expected_centroids = [[2.5,5.0],[None,1.5]] 
+    expected_centroids = [[2.5,5.0],[0,1.5]] 
     expected_cluster_assignments = [0,0,1,1]
     expected_data_point_assignments = [[0,1],[2,3]]
     expected_clustering_results = [[1,0],[1,0],[0,1],[0,1]]
@@ -212,7 +212,7 @@ def test_update():
     kmeans.centroids = [[0.0,0.0,0.0],[0.0,0.0,0.0]]
     kmeans.mask_centroids = [[0.0,0.0,0.0],[0.0,0.0,0.0]]
     
-    new_centroids = [[1.0,3.5,None],[7.0,8.0,9.0]]
+    new_centroids = [[1.0,3.5,0],[7.0,8.0,9.0]]
     new_mask_centroids = [[1,1,0],[1,1,1]]
     kmeans.update()
     assert numpy.array_equal(new_centroids,kmeans.centroids)
