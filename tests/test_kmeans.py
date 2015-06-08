@@ -95,6 +95,9 @@ def test_initialise():
     centroids = [[4.0,2.0,4.2617147424925346],[4.0,2.0,4.2148024123512426]]
     assert numpy.array_equal(centroids,kmeans.centroids)
     
+    distances = [0,0]
+    assert numpy.array_equal(distances,kmeans.distances)
+    
     
 """ Run an entire clustering on a simple example. """
 def test_cluster():
@@ -237,6 +240,36 @@ def test_update():
     assert numpy.array_equal(new_centroids,kmeans.centroids)
     assert numpy.array_equal(new_mask_centroids,kmeans.mask_centroids)
     
+    # Case when we use the 'singleton' option for empty clusters - reassign point furthest away to the cluster
+    # Points 0 and 1 go to cluster 0, 2 to cluster 1 and none to cluster 2. 
+    # Point 2 is furthest away, so gets reassigned to cluster 2 - making 
+    # cluster 1 empty. Then point 1 is furthest away and gets reassigned to cluster 1
+    X = numpy.array([[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0]])
+    M = numpy.array([[1,1,0],[0,1,0],[1,1,1]])
+    K = 3
+    kmeans = KMeans(X,M,K,resolve_empty='singleton')
+    kmeans.data_point_assignments = numpy.array([[0,1],[2],[]]) #points 0,1 to cluster 0, 2 to cluster 1, none to cluster 2
+    kmeans.cluster_assignments = [0,0,1]
+    kmeans.centroids = [[1.0,2.0,3.0],[15.0,16.0,17.0],[500.0,500.0,500.0]]
+    kmeans.mask_centroids = [[1,1,0],[1,1,1],[1,1,1]]
+    kmeans.distances = numpy.array([
+        kmeans.compute_MSE(kmeans.X[0],kmeans.centroids[0],M[0],kmeans.mask_centroids[0]),
+        kmeans.compute_MSE(kmeans.X[1],kmeans.centroids[0],M[1],kmeans.mask_centroids[0]),
+        kmeans.compute_MSE(kmeans.X[2],kmeans.centroids[1],M[2],kmeans.mask_centroids[1])
+    ])
+    kmeans.mins = [1.0,2.0,9.0]
+    kmeans.maxs = [7.0,8.0,9.0]
+    
+    new_centroids = [[1.0,2.0,0],[4.0,5.0,6.0],[7.0,8.0,9.0]]
+    new_data_point_assignments = [[0],[1],[2]]
+    new_distances = [0,0,0]
+    
+    kmeans.update()
+    
+    assert new_data_point_assignments == list(kmeans.data_point_assignments)
+    assert numpy.array_equal(new_distances,kmeans.distances)
+    assert numpy.array_equal(new_centroids,kmeans.centroids)
+    
 
 """ Test random cluster initialisation """
 def test_random_cluster_centroid():
@@ -270,13 +303,18 @@ def test_closest_cluster():
     expected_closest_cluster_0 = 0 # MSE = 1.0 vs 1.0
     expected_closest_cluster_1 = 0 # MSE = 4.0 vs 16.0
     expected_closest_cluster_2 = 1 # MSE = 44.5 vs 37.0
-    closest_cluster_0 = kmeans.closest_cluster(X[0],M[0])
-    closest_cluster_1 = kmeans.closest_cluster(X[1],M[1])
-    closest_cluster_2 = kmeans.closest_cluster(X[2],M[2])
+    closest_cluster_0 = kmeans.closest_cluster(X[0],0,M[0])
+    closest_cluster_1 = kmeans.closest_cluster(X[1],1,M[1])
+    closest_cluster_2 = kmeans.closest_cluster(X[2],2,M[2])
     
     assert expected_closest_cluster_0 == closest_cluster_0
     assert expected_closest_cluster_1 == closest_cluster_1
     assert expected_closest_cluster_2 == closest_cluster_2
+    
+    # Also test whether the distances are set correctly
+    expected_distances = [1.0,4.0,37.0]
+    distances = kmeans.distances
+    assert numpy.array_equal(expected_distances,distances)
     
     # Test when all MSEs return None (impossible but still testing behaviour)
     centroids = numpy.ones((2,3))
@@ -285,7 +323,7 @@ def test_closest_cluster():
     kmeans.mask_centroids = mask_centroids
     
     expected_closest_cluster = 1
-    closest_cluster = kmeans.closest_cluster(X[0],M[0])
+    closest_cluster = kmeans.closest_cluster(X[0],0,M[0])
     assert expected_closest_cluster == closest_cluster
 
 
@@ -345,6 +383,28 @@ def test_find_known_coordinate_values():
     
     assert numpy.array_equal(expected_lists_known_coordinate_values_0,lists_known_coordinate_values_0)
     assert numpy.array_equal(expected_lists_known_coordinate_values_1,lists_known_coordinate_values_1)
+    
+    
+""" Test finding the data point furthest away from its centroid. """
+def test_find_point_furthest_away():
+    X = numpy.array([[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0]])
+    M = numpy.array([[1,1,0],[0,1,0],[1,1,1]])
+    K = 2
+    kmeans = KMeans(X,M,K)
+    
+    # Equal distance for point 0
+    centroids = [[1.0,3.0,1.0],[2.0,1.0,3.0]]
+    mask_centroids = [[0,1,1],[1,1,0]] 
+    kmeans.centroids = centroids
+    kmeans.mask_centroids = mask_centroids
+    
+    kmeans.closest_cluster(X[0],0,M[0]) # MSE = 1.0 vs 1.0
+    kmeans.closest_cluster(X[1],1,M[1]) # MSE = 4.0 vs 16.0
+    kmeans.closest_cluster(X[2],2,M[2]) # MSE = 44.5 vs 37.0
+    
+    expected_furthest_away = 2
+    furthest_away = kmeans.find_point_furthest_away()
+    assert expected_furthest_away == furthest_away
     
 
 """ Test the construction of the clustering matrix. """

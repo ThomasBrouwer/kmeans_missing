@@ -18,3 +18,11 @@ For initialisation, we:
 We iterate until no points change cluster anymore.
 
 The cluster assignments can then be retrieved as an from KMeans.cluster_assignments, or as a matrix from KMeans.clustering_results.
+
+If a cluster becomes empty, we either reassign its centroid randomly ('random'), or assign the point furthest away from its current cluster centroid ('singleton').
+
+Usage is as follows:
+- kmeans = KMeans(X,M,K,resolve_empty='random')
+- kmeans.initialise()
+- kmeans.cluster()
+- return kmeans.clustering_results

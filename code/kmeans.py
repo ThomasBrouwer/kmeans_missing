@@ -1,10 +1,12 @@
 import numpy, random, time
 
+# Cluster the rows of the dataset X, with missing values indicated by M.
 class KMeans:
-    def __init__(self,X,M,K):
+    def __init__(self,X,M,K,resolve_empty='random'):
         self.X = numpy.array(X,dtype=float)
         self.M = numpy.array(M,dtype=float)
         self.K = K
+        self.resolve_empty = resolve_empty
         
         assert len(self.X.shape) == 2, "Input matrix X is not a two-dimensional array, " \
             "but instead %s-dimensional." % len(self.X.shape)
@@ -23,6 +25,9 @@ class KMeans:
             assert len(omega_row) != 0, "Fully unobserved row in X, row %s." % i
         for j,omega_column in enumerate(self.omega_columns):
             assert len(omega_column) != 0, "Fully unobserved column in X, column %s." % j
+            
+        # Initialise the distances from data points to the assigned cluster centroids to zeros
+        self.distances = numpy.zeros(self.no_points)
     
     
     """ Initialise the cluster centroids randomly """
@@ -30,7 +35,7 @@ class KMeans:
         if seed is not None:
             random.seed(seed)
         
-        # Compute the mins and maxes of the columns
+        # Compute the mins and maxes of the columns - i.e. the min and max of each dimension
         self.mins = [min([self.X[i,j] for i in self.omega_columns[j]]) for j in range(0,self.no_coordinates)]
         self.maxs = [max([self.X[i,j] for i in self.omega_columns[j]]) for j in range(0,self.no_coordinates)]
         
@@ -70,7 +75,7 @@ class KMeans:
         change = False
         for d,(data_point,mask) in enumerate(zip(self.X,self.M)):
             old_c = self.cluster_assignments[d]
-            new_c = self.closest_cluster(data_point,mask)
+            new_c = self.closest_cluster(data_point,d,mask)
             
             self.cluster_assignments[d] = new_c
             self.data_point_assignments[new_c].append(d)
@@ -81,7 +86,7 @@ class KMeans:
     
     # Compute the MSE to each of the clusters, and return the index of the closest cluster.
     # If two clusters are equally far, we return the cluster with the lowest index.
-    def closest_cluster(self,data_point,mask_d):
+    def closest_cluster(self,data_point,index_data_point,mask_d):
         closest_index = None
         closest_MSE = None
         for c,(centroid,mask_c) in enumerate(zip(self.centroids,self.mask_centroids)):
@@ -89,6 +94,7 @@ class KMeans:
             if (closest_MSE is None) or (MSE is not None and MSE < closest_MSE): #either no closest centroid yet, or MSE is defined and less
                 closest_MSE = MSE
                 closest_index = c
+        self.distances[index_data_point] = closest_MSE
         return closest_index
     
     
@@ -104,25 +110,45 @@ class KMeans:
         If for a coordinate there are no known values, we set this cluster's mask to 0 there.
         If a cluster has no points assigned to it at all, we randomly re-initialise it. """
     def update(self):
-        for c in xrange(0,self.K):          
-            known_coordinate_values = self.find_known_coordinate_values(c)
-            
-            if known_coordinate_values is None:
+        for c in xrange(0,self.K): 
+            self.update_cluster(c)
+    
+    # Update for one specific cluster
+    def update_cluster(self,c):        
+        known_coordinate_values = self.find_known_coordinate_values(c)
+        
+        if known_coordinate_values is None:
+            if self.resolve_empty == 'singleton':
+                # Find the point currently furthest away from its centroid                    
+                index_furthest_away = self.find_point_furthest_away()
+                old_cluster = self.cluster_assignments[index_furthest_away]
+                
+                # Add point to new cluster
+                self.centroids[c] = self.X[index_furthest_away]
+                self.mask_centroids[c] = self.M[index_furthest_away]
+                self.distances[index_furthest_away] = 0.0
+                self.cluster_assignments[index_furthest_away] = c
+                self.data_point_assignments[c] = [index_furthest_away]
+                
+                # Remove from old cluster and update
+                self.data_point_assignments[old_cluster].remove(index_furthest_away)
+                self.update_cluster(old_cluster)
+            else:
                 # Randomly re-initialise this point
                 self.centroids[c] = self.random_cluster_centroid()
                 self.mask_centroids[c] = numpy.ones(self.no_coordinates)
-            else:
-                # For each coordinate set the centroid to the average, or to 0 if no values are observed
-                for coordinate,coordinate_values in enumerate(known_coordinate_values):
-                    if len(coordinate_values) == 0:
-                        new_coordinate = 0              
-                        new_mask = 0
-                    else:
-                        new_coordinate = sum(coordinate_values) / float(len(coordinate_values))
-                        new_mask = 1
-                    
-                    self.centroids[c][coordinate] = new_coordinate
-                    self.mask_centroids[c][coordinate] = new_mask
+        else:
+            # For each coordinate set the centroid to the average, or to 0 if no values are observed
+            for coordinate,coordinate_values in enumerate(known_coordinate_values):
+                if len(coordinate_values) == 0:
+                    new_coordinate = 0              
+                    new_mask = 0
+                else:
+                    new_coordinate = sum(coordinate_values) / float(len(coordinate_values))
+                    new_mask = 1
+                
+                self.centroids[c][coordinate] = new_coordinate
+                self.mask_centroids[c][coordinate] = new_mask
     
     
     # For a given centroid c, construct a list of lists, each list consisting of
@@ -142,6 +168,12 @@ class KMeans:
             ]
             
         return lists_known_coordinate_values
+        
+    
+    # Find data point furthest away from its current cluster centroid
+    def find_point_furthest_away(self):
+        data_point_index = self.distances.argmax()
+        return data_point_index
         
     
     # Create a binary matrix indicating the clustering (so size [no_points x K])
