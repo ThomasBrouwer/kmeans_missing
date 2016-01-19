@@ -1,8 +1,10 @@
 import numpy, random, time
 
+max_iterations = 200 # safeguard - if it takes more than this many iterations, stop
+
 # Cluster the rows of the dataset X, with missing values indicated by M.
 class KMeans:
-    def __init__(self,X,M,K,resolve_empty='random'):
+    def __init__(self,X,M,K,resolve_empty='singleton'):
         self.X = numpy.array(X,dtype=float)
         self.M = numpy.array(M,dtype=float)
         self.K = K
@@ -63,6 +65,10 @@ class KMeans:
             iteration += 1
             change = self.assignment()
             self.update()
+            
+            if iteration >= max_iterations:
+                print "WARNING: did not converge, stopped after %s iterations." % max_iterations
+                break
             
         # At the end, we create a binary matrix indicating which points were assigned to which cluster
         self.create_matrix()

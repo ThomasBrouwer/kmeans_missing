@@ -22,7 +22,7 @@ The cluster assignments can then be retrieved as an from KMeans.cluster_assignme
 If a cluster becomes empty, we either reassign its centroid randomly ('random'), or assign the point furthest away from its current cluster centroid ('singleton').
 
 Usage is as follows:
-- kmeans = KMeans(X,M,K,resolve_empty='random')
+- kmeans = KMeans(X,M,K,resolve_empty='singleton')
 - kmeans.initialise()
 - kmeans.cluster()
 - return kmeans.clustering_results
