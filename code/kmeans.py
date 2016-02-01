@@ -10,13 +10,15 @@ class KMeans:
         self.K = K
         self.resolve_empty = resolve_empty
         
-        assert len(self.X.shape) == 2, "Input matrix X is not a two-dimensional array, " \
-            "but instead %s-dimensional." % len(self.X.shape)
-        assert self.X.shape == self.M.shape, "Input matrix X is not of the same size as " \
-            "the indicator matrix M: %s and %s respectively." % (self.X.shape,self.M.shape)
+        assert len(self.X.shape) == 2, "Input matrix X is not a two-dimensional array, but instead %s-dimensional." % len(self.X.shape)
+        assert self.X.shape == self.M.shape, "Input matrix X is not of the same size as the indicator matrix M: %s and %s respectively." % (self.X.shape,self.M.shape)
         assert self.K > 0, "K should be greater than 0."
         
         (self.no_points,self.no_coordinates) = self.X.shape
+        self.no_unique_points = len(set([tuple(l) for l in self.X.tolist()]))    
+        
+        if self.no_points < self.K: print "Want %s clusters but only have %s datapoints!" % (self.K,self.no_points)
+        if self.no_unique_points < self.K: print "Want %s clusters but only have %s unique datapoints!" % (self.K,self.no_unique_points)
         
         # Compute lists of which indices are known (from M) for each row/column
         self.omega_rows = [[j for j in range(0,self.no_coordinates) if self.M[i,j]] for i in range(0,self.no_points)]        
@@ -120,29 +122,33 @@ class KMeans:
             self.update_cluster(c)
     
     # Update for one specific cluster
-    def update_cluster(self,c):        
+    def update_cluster(self,c):
         known_coordinate_values = self.find_known_coordinate_values(c)
         
         if known_coordinate_values is None:
-            if self.resolve_empty == 'singleton':
-                # Find the point currently furthest away from its centroid                    
-                index_furthest_away = self.find_point_furthest_away()
-                old_cluster = self.cluster_assignments[index_furthest_away]
-                
-                # Add point to new cluster
-                self.centroids[c] = self.X[index_furthest_away]
-                self.mask_centroids[c] = self.M[index_furthest_away]
-                self.distances[index_furthest_away] = 0.0
-                self.cluster_assignments[index_furthest_away] = c
-                self.data_point_assignments[c] = [index_furthest_away]
-                
-                # Remove from old cluster and update
-                self.data_point_assignments[old_cluster].remove(index_furthest_away)
-                self.update_cluster(old_cluster)
-            else:
-                # Randomly re-initialise this point
-                self.centroids[c] = self.random_cluster_centroid()
-                self.mask_centroids[c] = numpy.ones(self.no_coordinates)
+            # Reassign a datapoint to this cluster, as long as there are enough 
+            # unique datapoints. Either furthest away (singleton) or random.
+            if self.no_unique_points >= self.K:
+                if self.resolve_empty == 'singleton':
+                    # Find the point currently furthest away from its centroid                    
+                    index_furthest_away = self.find_point_furthest_away()
+                    old_cluster = self.cluster_assignments[index_furthest_away]
+                    
+                    # Add point to new cluster
+                    self.centroids[c] = self.X[index_furthest_away]
+                    self.mask_centroids[c] = self.M[index_furthest_away]
+                    self.distances[index_furthest_away] = 0.0
+                    self.cluster_assignments[index_furthest_away] = c
+                    self.data_point_assignments[c] = [index_furthest_away]
+                    
+                    # Remove from old cluster and update
+                    self.data_point_assignments[old_cluster].remove(index_furthest_away)
+                    #print c,old_cluster
+                    self.update_cluster(old_cluster)
+                else:
+                    # Randomly re-initialise this point
+                    self.centroids[c] = self.random_cluster_centroid()
+                    self.mask_centroids[c] = numpy.ones(self.no_coordinates)
         else:
             # For each coordinate set the centroid to the average, or to 0 if no values are observed
             for coordinate,coordinate_values in enumerate(known_coordinate_values):
