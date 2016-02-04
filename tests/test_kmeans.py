@@ -225,7 +225,7 @@ def test_update():
     X = numpy.array([[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0]])
     M = numpy.array([[1,1,0],[0,1,0],[1,1,1]])
     K = 2
-    kmeans = KMeans(X,M,K)
+    kmeans = KMeans(X,M,K,'random')
     kmeans.data_point_assignments = numpy.array([[0,1,2],[]]) #points 0,1,2 to cluster 0, none to cluster 1
     kmeans.centroids = [[0.0,0.0,0.0],[0.0,0.0,0.0]]
     kmeans.mask_centroids = [[0.0,0.0,0.0],[0.0,0.0,0.0]]
