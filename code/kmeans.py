@@ -3,8 +3,8 @@ import numpy, random, time
 # Cluster the rows of the dataset X, with missing values indicated by M.
 class KMeans:
     def __init__(self,X,M,K,resolve_empty='random'):
-        self.X = numpy.array(X,dtype=float)
-        self.M = numpy.array(M,dtype=float)
+        self.X = numpy.copy(X)
+        self.M = numpy.copy(M)
         self.K = K
         self.resolve_empty = resolve_empty
         
@@ -20,11 +20,19 @@ class KMeans:
         self.omega_rows = [[j for j in range(0,self.no_coordinates) if self.M[i,j]] for i in range(0,self.no_points)]        
         self.omega_columns = [[i for i in range(0,self.no_points) if self.M[i,j]] for j in range(0,self.no_coordinates)]
                     
-        # Assert none of the rows or columns are entirely unknown values
+        # Assert none of the rows are entirely unknown values
         for i,omega_row in enumerate(self.omega_rows):
             assert len(omega_row) != 0, "Fully unobserved row in X, row %s." % i
-        for j,omega_column in enumerate(self.omega_columns):
-            assert len(omega_column) != 0, "Fully unobserved column in X, column %s." % j
+            
+        # Columns can be entirely unknown - they just don't influence the clustering - but we need to remove them
+        columns_to_remove = [j for j,omega_column in enumerate(self.omega_columns) if len(omega_column) == 0]
+        if len(columns_to_remove) > 0:
+            print "WARNING: removed columns %s for K-means clustering as they have no observed datapoints." % columns_to_remove
+            self.X = numpy.delete(self.X,columns_to_remove,axis=1)
+            self.M = numpy.delete(self.M,columns_to_remove,axis=1)
+            self.no_coordinates -= len(columns_to_remove)
+            self.omega_rows = [[j for j in range(0,self.no_coordinates) if self.M[i,j]] for i in range(0,self.no_points)]        
+            self.omega_columns = [[i for i in range(0,self.no_points) if self.M[i,j]] for j in range(0,self.no_coordinates)]
             
         # Initialise the distances from data points to the assigned cluster centroids to zeros
         self.distances = numpy.zeros(self.no_points)
